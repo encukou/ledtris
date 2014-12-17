@@ -251,8 +251,29 @@ def collide():
             return True
     return False
 
+class Button:
+    def __init__(self, desc):
+        self.pin = pyb.Pin(desc, pyb.Pin.IN, pyb.Pin.PULL_DOWN)
+        self.prev = self.pin.value()
+
+    def was_pressed(self):
+        value = self.pin.value()
+        try:
+            if not self.prev and value:
+                return True
+        finally:
+            self.prev = value
+
+    def held(self):
+        return self.pin.value()
+
+left = Button('Y1')
+turn = Button('Y2')
+right = Button('Y3')
+down = Button('Y4')
+
 while not switch():
-    if micros.counter() > 100000:
+    if micros.counter() > 10000 or down.held(): #100000:
         micros.counter(0)
 
         floater[0] += 1
@@ -261,6 +282,15 @@ while not switch():
             for x, y in f_shape:
                 board[x - 1 + f_row, y + f_col] = f_color
             new_floater()
+            if collide():
+                raise ValueError('Game Over!')
 
-        for r in range(max(0, floater[0] - 1), floater[0] + floater[3][0] + 1):
+        for r in range(max(0, floater[0] - 1), floater[0] + floater[3][0]):
             update_row(r)
+            s.show()
+
+    if left.was_pressed():
+        floater[1] -= 1
+
+    if right.was_pressed():
+        floater[1] += 1
