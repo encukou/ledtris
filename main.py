@@ -207,12 +207,12 @@ for color, *shape_defs in (
     shapes = []
     for w, h, shape_def in shape_defs:
         shape = set()
-        for x in range(w):
-            for y in range(h):
+        for x in range(h):
+            for y in range(w):
                 if shape_def[0] == 'X':
                     shape.add((x, y))
                 shape_def = shape_def[1:]
-        shapes.append((w, h, shape))
+        shapes.append(shape)
     pieces.append((color, shapes))
 
 board = {}
@@ -221,21 +221,25 @@ floater = []
 for c in range(8):
     board[s.length, c] = WHITE
 
+for r in range(s.length):
+    board[r, -1] = WHITE
+    board[r, 8] = WHITE
+
 def new_floater():
     color, shapes = choice(pieces)
     floater.clear()
-    floater.extend((0, 2, color, shapes[0]))
+    floater.extend((0, 2, color, 0, shapes))
 new_floater()
 
 print(pieces)
 print(floater)
 
 def update_row(n):
-    f_row, f_col, f_color, (f_w, f_h, f_shape) = floater
+    f_row, f_col, f_color, f_turn, f_shapes = floater
     colors = []
     for col in range(8):
         color = board.get((n, col), BLACK)
-        if (n - f_row, col - f_col) in f_shape:
+        if (n - f_row, col - f_col) in f_shapes[f_turn]:
             color = f_color
         colors.append(color)
     s.set_row(n, colors)
@@ -245,8 +249,8 @@ for r in range(s.length):
 s.show()
 
 def collide():
-    f_row, f_col, f_color, (f_w, f_h, f_shape) = floater
-    for x, y in f_shape:
+    f_row, f_col, f_color, f_turn, f_shapes = floater
+    for x, y in f_shapes[f_turn]:
         if (x + f_row, y + f_col) in board:
             return True
     return False
@@ -273,24 +277,34 @@ right = Button('Y3')
 down = Button('Y4')
 
 while not switch():
-    if micros.counter() > 10000 or down.held(): #100000:
+    if micros.counter() > 100000 or down.held():
         micros.counter(0)
 
         floater[0] += 1
-        f_row, f_col, f_color, (f_w, f_h, f_shape) = floater
+        f_row, f_col, f_color, f_turn, f_shapes = floater
         if collide():
-            for x, y in f_shape:
+            for x, y in f_shapes[f_turn]:
                 board[x - 1 + f_row, y + f_col] = f_color
             new_floater()
             if collide():
                 raise ValueError('Game Over!')
 
-        for r in range(max(0, floater[0] - 1), floater[0] + floater[3][0]):
+        for r in range(max(0, f_row - 1), min(f_row + 4, s.length)):
             update_row(r)
             s.show()
 
     if left.was_pressed():
         floater[1] -= 1
+        if collide():
+            floater[1] += 1
 
     if right.was_pressed():
         floater[1] += 1
+        if collide():
+            floater[1] -= 1
+
+    if turn.was_pressed():
+        old = floater[3]
+        floater[3] = (floater[3] + 1) % len(f_shapes)
+        if collide():
+            floater[3] = old
