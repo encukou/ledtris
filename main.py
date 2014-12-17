@@ -1,5 +1,7 @@
 import pyb
 
+SIZE = 144
+
 micros = pyb.Timer(2, prescaler=83, period=0x3fffffff)
 switch = pyb.Switch()
 
@@ -25,7 +27,7 @@ class Strips:
 
     def set_row(self, n, colors):
         for color_component in range(3):
-            idx = n * 3 + color_component
+            idx = (SIZE-1-n) * 3 + color_component
             for bit in range(8):
                 row = idx * 8 + bit
                 value = 0xff
@@ -34,6 +36,7 @@ class Strips:
                     value &= ~(is_set << strip)
                 self.buf[row] = value
 
+        return
         for i, color in enumerate(colors):
             if color == CYAN:
                 print('\033[36;3m', end='')
@@ -59,7 +62,9 @@ class Strips:
             print('\033[0m', end='')
 
     def show(self):
+        pyb.disable_irq()
         bb = bitbang(id(self.buf), self.length * 3 * 8)
+        pyb.enable_irq()
 
 @micropython.asm_thumb
 def bitbang(r0, r1):
@@ -138,7 +143,7 @@ BLACK = 0, 0, 0
 WHITE = 1, 1, 1
 FLASH = 255, 255, 255
 
-s = Strips(144)
+s = Strips(SIZE)
 s.show()
 pyb.disable_irq() ; s.show() ; pyb.enable_irq()
 
@@ -227,12 +232,10 @@ for r in range(s.length):
 
 def new_floater():
     color, shapes = choice(pieces)
+    #color, shapes = pieces[0]  # DEBUG
     floater.clear()
     floater.extend((0, 2, color, 0, shapes))
 new_floater()
-
-print(pieces)
-print(floater)
 
 def update_row(n):
     f_row, f_col, f_color, f_turn, f_shapes = floater
@@ -255,6 +258,41 @@ def collide():
             return True
     return False
 
+def handle_filled_rows(n):
+    start_row = min(n + 4, s.length - 1)
+    flash = False
+    for is_white in [True, False] * 2:
+        for row in range(max(0, start_row - 4), start_row + 1):
+            if all((row, c) in board for c in range(8)):
+                flash = True
+                if is_white:
+                    s.set_row(row, [FLASH] * 8)
+                else:
+                    update_row(row)
+        if not flash:
+            return
+        s.show()
+        micros.counter(0)
+        while micros.counter() < 20000:
+            pass
+    offset = 0
+    for row in range(start_row, -1, -1):
+        while all((row + offset, c) in board for c in range(8)):
+            offset += 1
+        for c in range(8):
+            try:
+                board[(row, c)] = board[(row - offset, c)]
+            except KeyError:
+                board.pop((row, c), None)
+    for row in reversed(range(s.length)):
+        update_row(row)
+        s.show()
+
+def set_brick():
+    for x, y in f_shapes[f_turn]:
+        board[x - 1 + f_row, y + f_col] = f_color
+    floater[0] = s.length
+
 class Button:
     def __init__(self, desc):
         self.pin = pyb.Pin(desc, pyb.Pin.IN, pyb.Pin.PULL_DOWN)
@@ -271,40 +309,51 @@ class Button:
     def held(self):
         return self.pin.value()
 
-left = Button('Y1')
+left = Button('Y3')
 turn = Button('Y2')
-right = Button('Y3')
+right = Button('Y1')
 down = Button('Y4')
 
 while not switch():
-    if micros.counter() > 100000 or down.held():
-        micros.counter(0)
+    updated = False
+    try:
+        if micros.counter() > 100000 or down.held():
+            updated = True
+            micros.counter(0)
 
-        floater[0] += 1
-        f_row, f_col, f_color, f_turn, f_shapes = floater
-        if collide():
-            for x, y in f_shapes[f_turn]:
-                board[x - 1 + f_row, y + f_col] = f_color
-            new_floater()
+            floater[0] += 1
+            f_row, f_col, f_color, f_turn, f_shapes = floater
             if collide():
-                raise ValueError('Game Over!')
+                set_brick()
+                handle_filled_rows(f_row)
+                new_floater()
+                if collide():
+                    set_brick()
+                    raise ValueError('Game Over!')
+                micros.counter(0)
 
-        for r in range(max(0, f_row - 1), min(f_row + 4, s.length)):
-            update_row(r)
-            s.show()
-
-    if left.was_pressed():
-        floater[1] -= 1
-        if collide():
-            floater[1] += 1
-
-    if right.was_pressed():
-        floater[1] += 1
-        if collide():
+        if left.was_pressed():
             floater[1] -= 1
+            if collide():
+                floater[1] += 1
+            else:
+                updated = True
 
-    if turn.was_pressed():
-        old = floater[3]
-        floater[3] = (floater[3] + 1) % len(f_shapes)
-        if collide():
-            floater[3] = old
+        if right.was_pressed():
+            floater[1] += 1
+            if collide():
+                floater[1] -= 1
+            else:
+                updated = True
+
+        if turn.was_pressed():
+            old = floater[3]
+            floater[3] = (floater[3] + 1) % len(f_shapes)
+            if collide():
+                floater[3] = old
+            else:
+                updated = True
+    finally:
+        for r in range(max(0, floater[0] - 1), min(floater[0] + 4, s.length)):
+            update_row(r)
+        s.show()
