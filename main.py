@@ -1,4 +1,5 @@
 import pyb
+from strips import Strips
 
 SIZE = 144
 
@@ -8,145 +9,26 @@ switch = pyb.Switch()
 def choice(seq):
     return seq[pyb.rng() % len(seq)]
 
-class Strips:
-    def __init__(self, length):
-        self.length = length
-        self.buf = bytearray(length * 3 * 8)
+s = Strips(SIZE)
 
-        for n in range(length * 3 * 8):
-            self.buf[n] = 0xff
+s.set_row(0, [(c, 0, 0) for c in range(8)])
+s.set_row(1, [(0, c, 0) for c in range(8)])
+s.set_row(2, [(0, 0, c) for c in range(8)])
 
-        pyb.Pin(pyb.Pin.cpu.A0, mode=pyb.Pin.OUT_PP)
-        pyb.Pin(pyb.Pin.cpu.A1, mode=pyb.Pin.OUT_PP)
-        pyb.Pin(pyb.Pin.cpu.A2, mode=pyb.Pin.OUT_PP)
-        pyb.Pin(pyb.Pin.cpu.A3, mode=pyb.Pin.OUT_PP)
-        pyb.Pin(pyb.Pin.cpu.A4, mode=pyb.Pin.OUT_PP)
-        pyb.Pin(pyb.Pin.cpu.A5, mode=pyb.Pin.OUT_PP)
-        pyb.Pin(pyb.Pin.cpu.A6, mode=pyb.Pin.OUT_PP)
-        pyb.Pin(pyb.Pin.cpu.A7, mode=pyb.Pin.OUT_PP)
-
-    def set_row(self, n, colors):
-        for color_component in range(3):
-            idx = (SIZE-1-n) * 3 + color_component
-            for bit in range(8):
-                row = idx * 8 + bit
-                value = 0xff
-                for strip, (r, g, b) in enumerate(colors):
-                    is_set = bool((g, r, b)[color_component] & (1 << (7-bit)))
-                    value &= ~(is_set << strip)
-                self.buf[row] = value
-
-        return
-        for i, color in enumerate(colors):
-            if color == CYAN:
-                print('\033[36;3m', end='')
-            elif color ==  BLUE:
-                print('\033[34;3m', end='')
-            elif color ==  ORANGE:
-                print('\033[37;3m', end='')  # (gray)
-            elif color ==  YELLOW:
-                print('\033[33;3m', end='')
-            elif color ==  LIME:
-                print('\033[32;3m', end='')
-            elif color ==  MAGENTA:
-                print('\033[35;3m', end='')
-            elif color ==  RED:
-                print('\033[31;3m', end='')
-            elif color ==  BLACK:
-                print('\033[30;3m', end='')
-            elif color ==  WHITE:
-                print('\033[37;3m', end='')
-            elif color ==  FLASH:
-                print('\033[47;3m', end='')
-            print('\0337\033[{};{}HX\0338'.format(i+2, n+2), end='')
-            print('\033[0m', end='')
-
-    def show(self):
-        pyb.disable_irq()
-        bb = bitbang(id(self.buf), self.length * 3 * 8)
-        pyb.enable_irq()
-
-@micropython.asm_thumb
-def bitbang(r0, r1):
-    # r0 = current address
-    # r1 = total length
-    # r2 =
-    # r3 = main loop counter
-    # r4 = GPIOA address
-    # r5 = current bit pattern ; delay loop counter
-    # r6 =
-    # r7 =
-
-    ldr(r0, [r0, 12])  # hack: get pointer to bytearray contents
-
-    movwt(r4, stm.GPIOA)
-
-    # set up main loop
-    mov(r3, r1)
-    b(main_loop_entry)
-
-    # Main loop starts
-    label(main_loop)
-
-    # set to 0
-    movw(r5, 0xff)
-    strh(r5, [r4, stm.GPIO_BSRRL])
-
-    # delay for a bit
-    movw(r5, 10)
-    label(delay_on)
-    sub(r5, r5, 1)
-    cmp(r5, 0)
-    bgt(delay_on)
-
-    # set to bit pattern
-    ldrb(r5, [r0, 0])
-    strh(r5, [r4, stm.GPIO_BSRRH])
-    add(r0, r0, 1)
-
-    # delay for a bit
-    movw(r5, 10)
-    label(delay_data)
-    sub(r5, r5, 1)
-    cmp(r5, 0)
-    bgt(delay_data)
-
-    # set to 1
-    movw(r5, 0xff)
-    strh(r5, [r4, stm.GPIO_BSRRH])
-
-    # delay for a bit
-    movw(r5, 10)
-    label(delay_off)
-    sub(r5, r5, 1)
-    cmp(r5, 0)
-    bgt(delay_off)
-
-    # main loop footer
-    sub(r3, r3, 1)
-    label(main_loop_entry)
-    cmp(r3, 0)
-    bgt(main_loop)
-
-    # set to 0
-    movw(r5, 0xff)
-    strh(r5, [r1, stm.GPIO_BSRRL])
-
-CYAN = 0, 2, 2
-BLUE = 0, 0, 2
-ORANGE = 2, 1, 0
-YELLOW = 2, 2, 0
-LIME = 0, 2, 0
-MAGENTA = 1, 0, 1
-RED = 2, 0, 0
+CYAN = 0, 3, 2
+BLUE = 0, 0, 4
+ORANGE = 4, 2, 0
+YELLOW = 3, 3, 0
+LIME = 0, 3, 0
+MAGENTA = 3, 0, 4
+RED = 3, 0, 0
 BLACK = 0, 0, 0
-WHITE = 1, 1, 1
+WHITE = 3, 3, 3
 FLASH = 255, 255, 255
 
-s = Strips(SIZE)
-s.show()
-pyb.disable_irq() ; s.show() ; pyb.enable_irq()
+s.set_row(4, [CYAN, BLUE, ORANGE, YELLOW, LIME, MAGENTA, RED, WHITE])
 
+s.show()
 
 pieces = []
 for color, *shape_defs in (
@@ -309,9 +191,9 @@ class Button:
     def held(self):
         return self.pin.value()
 
-left = Button('Y3')
+left = Button('Y1')
 turn = Button('Y2')
-right = Button('Y1')
+right = Button('Y3')
 down = Button('Y4')
 
 while not switch():
