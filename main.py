@@ -229,12 +229,17 @@ while not switch():
                 updated = True
 
         if turn.was_pressed():
-            old = floater[3]
+            old_rotation = floater[3]
+            old_col = floater[1]
             floater[3] = (floater[3] + 1) % len(f_shapes)
-            if collide():
-                floater[3] = old
+            for col in (0, 1, -1, 2, -2, 3, -3, 4, -4):
+                floater[1] = old_col + col
+                if (0 <= floater[1] < 8) and not collide():
+                    updated = True
+                    break
             else:
-                updated = True
+                floater[3] = old_rotation
+                floater[1] = old_col
     finally:
         for r in range(max(0, floater[0] - 1), min(floater[0] + 4, s.length)):
             update_row(r)
