@@ -1,7 +1,8 @@
 import pyb
+import time
 from strips import Strips
 
-SIZE = 144
+SIZE = 8
 
 micros = pyb.Timer(2, prescaler=83, period=0x3fffffff)
 switch = pyb.Switch()
@@ -10,10 +11,6 @@ def choice(seq):
     return seq[pyb.rng() % len(seq)]
 
 s = Strips(SIZE)
-
-s.set_row(0, [(c, 0, 0) for c in range(8)])
-s.set_row(1, [(0, c, 0) for c in range(8)])
-s.set_row(2, [(0, 0, c) for c in range(8)])
 
 CYAN = 0, 3, 2
 BLUE = 0, 0, 4
@@ -26,9 +23,47 @@ BLACK = 0, 0, 0
 WHITE = 3, 3, 3
 FLASH = 255, 255, 255
 
-s.set_row(4, [CYAN, BLUE, ORANGE, YELLOW, LIME, MAGENTA, RED, WHITE])
+for i, color in enumerate([CYAN, BLUE, ORANGE, YELLOW, LIME, MAGENTA, RED, WHITE]):
+    s[i, 0] = i, 0, 0
+    s[i, 1] = 0, i, 0
+    s[i, 2] = 0, 0, i
+    s[i, 4] = color
 
-s.show()
+led = pyb.LED(3)
+wled = pyb.LED(2)
+
+def colorcycle():
+    x = 8
+    while True:
+        for i in range(x):
+            yield i, 0, x
+        for i in range(x):
+            yield x, 0, x-i
+        for i in range(x):
+            yield x, i, 0
+        for i in range(x):
+            yield x-i, x, 0
+        for i in range(x):
+            yield 0, x, i
+        for i in range(x):
+            yield 0, x-i, x
+
+colorcycles = [colorcycle() for i in range(8)]
+for a in range(8):
+    for b in range(a):
+        for c in range(2):
+            next(colorcycles[b])
+
+while not switch():
+    for a, c in enumerate(colorcycles):
+        s[a, 5] = next(c)
+    wled.on()
+    s.show()
+    wled.off()
+    led.toggle()
+    time.sleep_ms(100)
+
+raise ValueError()
 
 pieces = []
 for color, *shape_defs in (
