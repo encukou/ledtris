@@ -106,6 +106,16 @@ class Piece:
         for x, y in self.gen_blocks(0, 0, 0):
             blocks[x, y] = color
 
+    def gen_shifts(self, direction):
+        yield 0, 0
+        r = self.rotation
+        for val in SHIFTS.get((self.shape.size, r, (r + direction) % 4), ()):
+            y, x = divmod(val, 8)
+            if x > 4:
+                x -= 8
+                y += 1
+            yield x, -y
+
 
 left = Button('Y1')
 right = Button('Y2')
@@ -122,8 +132,29 @@ SHAPES = tuple(Shape(*args) for args in (
     (YELLOW, ('XX', 'XX')),
     (LIME, (' XX', 'XX', '')),
     (MAGENTA, (' X ', 'XXX', '')),
-    (RED, ('XX', ' XX', '')),
+    (RED, ('XX', ' XX')),
 ))
+
+SHIFTS = {
+    # http://web.archive.org/web/20080226183843/http://www.the-shell.net/img/srs_study.html
+    (4, 0, 1): (+2, -1, +10, -17),
+    (4, 0, 3): (-2, +1, +6, -15),
+    (4, 1, 2): (-2, +1, +6, +7),
+    (4, 1, 0): (-2, +1, +17, -10),
+    (4, 2, 3): (+1, -2, +17, -10),
+    (4, 2, 1): (-1, +2, +15, -6),
+    (4, 3, 0): (+2, -1, +15, -6),
+    (4, 3, 2): (+2, -1, +10, -9),
+
+    (3, 0, 1): (+1, -7, +16, +17),
+    (3, 0, 4): (-1, -9, +16, +15),
+    (3, 1, 2): (-1, +7, -16, -17),
+    (3, 1, 0): (-1, +7, -16, -17),
+    (3, 2, 3): (-1, -9, +16, +15),
+    (3, 2, 1): (+1, -7, +16, +17),
+    (3, 3, 0): (+1, +9, -16, -15),
+    (3, 3, 2): (+1, +9, -16, -15),
+}
 
 
 def generate_pieces():
@@ -151,16 +182,14 @@ while not switch():
             pass
 
     while clockwise.was_pressed():
-        for dx in (0, -1, 1):
-            for dy in (0, -1, 1):
-                if piece.move(blocks, dr=+1, dx=dx, dy=dy):
-                    break
+        for dx, dy in piece.gen_shifts(-1):
+            if piece.move(blocks, dr=-1, dx=dx, dy=dy):
+                break
 
     while counterclockwise.was_pressed():
-        for dx in (0, -1, 1):
-            for dy in (0, -1, 1):
-                if piece.move(blocks, dr=-1, dx=dx, dy=dy):
-                    break
+        for dx, dy in piece.gen_shifts(+1):
+            if piece.move(blocks, dr=+1, dx=dx, dy=dy):
+                break
 
     while right.was_pressed():
         piece.move(blocks, dx=+1)
