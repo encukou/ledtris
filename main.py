@@ -50,83 +50,89 @@ class Button:
         return self.pin.value()
 
 
-class Piece:
-    def __init__(self, color, blocks):
+class Shape:
+    def __init__(self, color, rows):
         self.color = color
-        self.blocks = blocks
-        self.row = 0
+        self.size = len(rows)
+        self.rotations = rotations = []
+        blocks = frozenset(
+            (x, y)
+            for y, row in enumerate(rows)
+            for x, char in enumerate(row)
+            if char == 'X')
+        for i in range(4):
+            rotations.append(blocks)
+            blocks = frozenset((self.size - y, x) for x, y in blocks)
+
+
+class Piece:
+    def __init__(self, shape):
+        self.shape = shape
         self.col = 0
-        self._update()
+        self.row = 0
+        self.rotation = 0
 
-    def rotate(self):
-        self.blocks = {(self.max_y - y, x) for x, y in self.blocks}
-        self._update()
-
-    def _update(self):
-        self.max_x = max(x for x, y in self.blocks)
-        self.max_y = max(y for x, y in self.blocks)
+    def gen_blocks(self, dx, dy, dr):
+        c = self.col + dx
+        r = self.row + dy
+        for x, y in self.shape.rotations[(self.rotation + dr) % 4]:
+            yield x + c, y + r
 
     def draw(self, color=None):
         if color is None:
-            color = self.color
-        for x, y in self.blocks:
-            display[x + self.col, y + self.row] = color
+            color = self.shape.color
+        for x, y in self.gen_blocks(0, 0, 0):
+            display[x, y] = color
 
-    def crashed(self, blocks):
-        for x, y in self.blocks:
-            if (x + self.col, y + self.row) in blocks:
+    def crashed(self, blocks, dx, dy, dr):
+        for xy in self.gen_blocks(dx, dy, dr):
+            if xy in blocks:
                 return True
-        if self.row + self.max_y >= SIZE:
-            return True
-        if self.col + self.max_x >= COLS:
-            return True
-        if self.col < 0:
+            x, y = xy
+            if x >= COLS or x < 0 or y >= SIZE:
+                return True
+        return False
+
+    def move(self, blocks, dx=0, dy=0, dr=0):
+        if not self.crashed(blocks, dx, dy, dr):
+            self.col += dx
+            self.row += dy
+            self.rotation += dr
             return True
         return False
 
-    def advance(self, blocks):
-        self.row += 1
-        if self.crashed(blocks):
-            self.row -= 1
-            return True
-
     def set(self, blocks):
-        for x, y in self.blocks:
-            blocks[x + self.col, y + self.row] = self.color
+        color = self.shape.color
+        for x, y in self.gen_blocks(0, 0, 0):
+            blocks[x, y] = color
 
 
 left = Button('Y1')
-turn = Button('Y2')
-right = Button('Y3')
-down = Button('Y4')
+right = Button('Y2')
+clockwise = Button('Y3')
+counterclockwise = Button('Y4')
+down = Button('Y5')
+hard_down = Button('Y6')
 
 
-def make_piece_info(color, rows):
-    return color, {
-        (x, y)
-        for y, row in enumerate(rows)
-        for x, char in enumerate(row)
-        if char == 'X'}
-
-
-PIECE_INFOS = tuple(make_piece_info(*args) for args in (
-    (CYAN, ('XXXX',)),
-    (BLUE, ('X  ', 'XXX')),
-    (ORANGE, ('  X', 'XXX')),
+SHAPES = tuple(Shape(*args) for args in (
+    (CYAN, ('', 'XXXX', '', '')),
+    (BLUE, ('X', 'XXX', '')),
+    (ORANGE, ('  X', 'XXX', '')),
     (YELLOW, ('XX', 'XX')),
-    (LIME, (' XX', 'XX ')),
-    (MAGENTA, (' X ', 'XXX')),
-    (RED, ('XX ', ' XX')),
+    (LIME, (' XX', 'XX', '')),
+    (MAGENTA, (' X ', 'XXX', '')),
+    (RED, ('XX', ' XX', '')),
 ))
 
 
 def generate_pieces():
     while True:
-        piece_infos = list(PIECE_INFOS)
-        while piece_infos:
-            idx = pyb.rng() % len(piece_infos)
-            yield Piece(*piece_infos[idx])
-            del piece_infos[idx]
+        shapes = list(SHAPES)
+        while shapes:
+            idx = pyb.rng() % len(shapes)
+            yield Piece(shapes[idx])
+            del shapes[idx]
 
 
 piece_generator = generate_pieces()
@@ -140,25 +146,31 @@ while not switch():
     while down.was_pressed():
         speedup = True
 
-    while turn.was_pressed():
-        for i in range(4):
-            piece.rotate()
-            if not piece.crashed(blocks):
-                break
+    while hard_down.was_pressed():
+        while piece.move(blocks, dy=+1):
+            pass
+
+    while clockwise.was_pressed():
+        for dx in (0, -1, 1):
+            for dy in (0, -1, 1):
+                if piece.move(blocks, dr=+1, dx=dx, dy=dy):
+                    break
+
+    while counterclockwise.was_pressed():
+        for dx in (0, -1, 1):
+            for dy in (0, -1, 1):
+                if piece.move(blocks, dr=-1, dx=dx, dy=dy):
+                    break
 
     while right.was_pressed():
-        piece.col += 1
-        if piece.crashed(blocks):
-            piece.col -= 1
+        piece.move(blocks, dx=+1)
 
     while left.was_pressed():
-        piece.col -= 1
-        if piece.crashed(blocks):
-            piece.col += 1
+        piece.move(blocks, dx=-1)
 
     while tick_count > 0:
         tick_count -= 1
-        if piece.advance(blocks):
+        if not piece.move(blocks, dy=+1):
             piece.set(blocks)
             speedup = False
             piece.draw()
