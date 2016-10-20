@@ -127,6 +127,9 @@ blocks = {}
 while not switch():
     piece.draw(BLACK)
 
+    while down.was_pressed():
+        speedup = True
+
     while turn.was_pressed():
         for i in range(4):
             piece.rotate()
@@ -147,12 +150,16 @@ while not switch():
         tick_count -= 1
         if piece.advance(blocks):
             piece.set(blocks)
+            speedup = False
             piece.draw()
             piece = Piece()
 
     piece.draw()
     display.show()
-    if down.held():
+    if not down.held():
+        speedup = False
+
+    if speedup:
         tick_count += 3
     else:
         pyb.wfi()
