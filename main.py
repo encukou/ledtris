@@ -10,15 +10,7 @@ COLS = 8
 display = Strips(SIZE)
 switch = pyb.Switch()
 
-board = Board(COLS, SIZE, pyb.rng)
-
-CYAN = 0, 3, 2
-BLUE = 0, 0, 4
-ORANGE = 4, 2, 0
-YELLOW = 3, 3, 0
-LIME = 0, 3, 0
-MAGENTA = 3, 0, 4
-RED = 3, 0, 0
+board = Board(COLS, SIZE, rng=pyb.rng)
 
 BLACK = 0, 0, 0
 WHITE = 3, 3, 3
@@ -92,7 +84,7 @@ while not switch():
             right=right.times_pressed(),
             cw=clockwise.times_pressed(),
             ccw=counterclockwise.times_pressed(),
-            ticks=ticks,
+            down=ticks,
             hard_drop=bool(hard_down.times_pressed())):
         speedup = False
         draw_current()

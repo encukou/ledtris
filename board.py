@@ -7,10 +7,6 @@ LIME = 0, 3, 0
 MAGENTA = 3, 0, 4
 RED = 3, 0, 0
 
-BLACK = 0, 0, 0
-WHITE = 3, 3, 3
-FLASH = 255, 255, 255
-
 
 class Shape:
     def __init__(self, color, rows):
@@ -31,15 +27,17 @@ class Piece:
     def __init__(self, board, shape):
         self.shape = shape
         self.board = board
-        self.col = 0
-        self.row = 0
+        self.col = (self.board.width - self.shape.size) // 2
+        self.row = -2
         self.rotation = 0
 
     def gen_blocks(self, dx, dy, dr):
         c = self.col + dx
         r = self.row + dy
         for x, y in self.shape.rotations[(self.rotation + dr) % 4]:
-            yield x + c, y + r
+            yy = y + r
+            if yy >= 0:
+                yield x + c, yy
 
     def crashed(self, dx, dy, dr):
         board = self.board
@@ -88,6 +86,8 @@ SHAPES = tuple(Shape(*args) for args in (
     (RED, ('XX', ' XX')),
 ))
 
+I, J, L, O, S, T, Z = SHAPES
+
 SHIFTS = {
     # http://web.archive.org/web/20080226183843/http://www.the-shell.net/img/srs_study.html
     (4, 0, 1): (+2, -1, +10, -17),
@@ -111,24 +111,26 @@ SHIFTS = {
 
 
 class Board:
-    def __init__(self, width, height, rng):
+    def __init__(self, width, height, *, rng, shapes=None):
         self.width = width
         self.height = height
         self.rng = rng
+        self.shapes = shapes or SHAPES
+
+        self.blocks = {}
         self.piece_generator = self._generate_pieces()
         self.current = next(self.piece_generator)
         self.upcoming = next(self.piece_generator)
-        self.blocks = {}
 
     def _generate_pieces(self):
         while True:
-            shapes = list(SHAPES)
+            shapes = list(self.shapes)
             while shapes:
                 idx = self.rng() % len(shapes)
                 yield Piece(self, shapes[idx])
                 del shapes[idx]
 
-    def advance(self, *, left=0, right=0, cw=0, ccw=0, ticks=0,
+    def advance(self, *, left=0, right=0, cw=0, ccw=0, down=0,
                 hard_drop=False):
         current = self.current
 
@@ -150,9 +152,9 @@ class Board:
         if hard_drop:
             while current.move(dy=+1):
                 pass
-            ticks = 1
+            down = 1
 
-        for i in range(ticks):
+        for i in range(down):
             if not current.move(dy=+1):
                 return True
 
