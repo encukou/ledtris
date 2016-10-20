@@ -61,8 +61,23 @@ class Piece:
         for x, y in self.blocks:
             display[x + self.col, y + self.row] = color
 
+    def crashed(self, blocks):
+        for x, y in self.blocks:
+            if (x + self.col, y + self.row) in blocks:
+                return True
+        if self.row + self.max_y >= SIZE:
+            return True
+        return False
+
     def advance(self, blocks):
         self.row += 1
+        if self.crashed(blocks):
+            self.row -= 1
+            return True
+
+    def set(self, blocks):
+        for x, y in self.blocks:
+            blocks[x + self.col, y + self.row] = self.color
 
 
 left = Button('Y1')
@@ -100,7 +115,10 @@ while not switch():
         pass
     micros.counter(0)
 
-    piece.advance(blocks)
+    if piece.advance(blocks):
+        piece.set(blocks)
+        piece.draw()
+        piece = Piece()
 
     piece.draw()
     display.show()
