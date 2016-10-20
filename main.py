@@ -51,8 +51,7 @@ class Button:
 
 
 class Piece:
-    def __init__(self):
-        color, blocks = PIECE_INFOS[0]
+    def __init__(self, color, blocks):
         self.color = color
         self.blocks = blocks
         self.row = 0
@@ -103,24 +102,35 @@ down = Button('Y4')
 
 
 def make_piece_info(color, rows):
-    return color, {(x, y)
-                   for y, row in enumerate(rows)
-                   for x, char in enumerate(row)
-                   if char == 'X'}
+    return color, {
+        (x, y)
+        for y, row in enumerate(rows)
+        for x, char in enumerate(row)
+        if char == 'X'}
 
 
-PIECE_INFOS = tuple(make_piece_info(color, rows) for color, rows in (
+PIECE_INFOS = tuple(make_piece_info(*args) for args in (
     (CYAN, ('XXXX',)),
-    (BLUE, (' X ', 'XXX')),
-    (ORANGE, ('XX ', ' XX')),
-    (YELLOW, (' XX', 'XX ')),
-    (LIME, ('  X', 'XXX')),
-    (MAGENTA, ('X  ', 'XXX')),
-    (RED, ('XX', 'XX')),
+    (BLUE, ('X  ', 'XXX')),
+    (ORANGE, ('  X', 'XXX')),
+    (YELLOW, ('XX', 'XX')),
+    (LIME, (' XX', 'XX ')),
+    (MAGENTA, (' X ', 'XXX')),
+    (RED, ('XX ', ' XX')),
 ))
 
 
-piece = Piece()
+def generate_pieces():
+    while True:
+        piece_infos = list(PIECE_INFOS)
+        while piece_infos:
+            idx = pyb.rng() % len(piece_infos)
+            yield Piece(*piece_infos[idx])
+            del piece_infos[idx]
+
+
+piece_generator = generate_pieces()
+piece = next(piece_generator)
 blocks = {}
 
 
@@ -152,7 +162,7 @@ while not switch():
             piece.set(blocks)
             speedup = False
             piece.draw()
-            piece = Piece()
+            piece = next(piece_generator)
 
     piece.draw()
     display.show()
