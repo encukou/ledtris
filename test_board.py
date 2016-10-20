@@ -6,6 +6,7 @@ SHAPES = {letter: getattr(board, letter) for letter in 'IJLOSTZ'}
 
 COLORS = {letter: shape.color for letter, shape in SHAPES.items()}
 COLORS['X'] = 255, 255, 255
+COLORS[':'] = -1, -1, -1
 
 LETTERS = {color: letter for letter, color in COLORS.items()}
 LETTERS[None] = ' '
@@ -21,13 +22,18 @@ class BoardFixture:
                     self.board.blocks[x, y] = COLORS[char]
         self.debug_print()
 
-    def debug_print(self, blocks=None):
+    def debug_print(self, blocks=None, current='_none'):
         if blocks is None:
             blocks = self.board.blocks
+        if current is '_none':
+            current = set(self.board.current.gen_blocks(0,0,0))
         for y in range(self.board.height):
             print('[', end='')
             for x in range(self.board.width):
-                print(LETTERS[blocks.get((x, y))], end='')
+                if (x, y) in current:
+                    print(':', end='')
+                else:
+                    print(LETTERS[blocks.get((x, y))], end='')
             print(']')
 
     def go(self, **kwargs):
@@ -48,9 +54,13 @@ class BoardFixture:
             for x, char in enumerate(row):
                 if char != ' ':
                     should[(x, y)] = COLORS[char]
+        got = dict(self.board.blocks)
+        got.update({(x, y): COLORS[':']
+                    for x, y in self.board.gen_current_blocks()
+                    if y >= 0})
         print('=' * (self.board.width+2), 'expected:')
-        self.debug_print(blocks=should)
-        assert self.board.blocks == should
+        self.debug_print(blocks=should, current=())
+        assert got == should
 
 @pytest.fixture
 def board_fixture():
@@ -136,4 +146,20 @@ def test_drop_two(board_fixture):
         'XXXXXXX ',
         'XXXXXXX ',
         current_shape='T',
+    )
+
+
+def test_rotation(board_fixture):
+    board_fixture.init(
+        '        ',
+        '        ',
+        '        ',
+        shapes='LTS',
+    )
+    board_fixture.go(cw=1, down=1)
+    board_fixture.assert_situation(
+        '  ::    ',
+        '   :    ',
+        '   :    ',
+        current_shape='L',
     )
