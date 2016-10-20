@@ -19,7 +19,7 @@ class Strips:
         r, g, b = value
         _set_pixel(self.buf, strip, self.length-1-pos, get_grb(r, g, b))
 
-    def show(self, n=0):
+    def show(self):
         buf = self.buf
         pyb.freq(168000000)
         pyb.disable_irq()

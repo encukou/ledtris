@@ -2,15 +2,11 @@ import pyb
 import time
 from strips import Strips
 
-SIZE = 8
+SIZE = 300
 
+display = Strips(SIZE)
 micros = pyb.Timer(2, prescaler=83, period=0x3fffffff)
 switch = pyb.Switch()
-
-def choice(seq):
-    return seq[pyb.rng() % len(seq)]
-
-s = Strips(SIZE)
 
 CYAN = 0, 3, 2
 BLUE = 0, 0, 4
@@ -19,196 +15,11 @@ YELLOW = 3, 3, 0
 LIME = 0, 3, 0
 MAGENTA = 3, 0, 4
 RED = 3, 0, 0
+
 BLACK = 0, 0, 0
 WHITE = 3, 3, 3
 FLASH = 255, 255, 255
 
-for i, color in enumerate([CYAN, BLUE, ORANGE, YELLOW, LIME, MAGENTA, RED, WHITE]):
-    s[i, 0] = i, 0, 0
-    s[i, 1] = 0, i, 0
-    s[i, 2] = 0, 0, i
-    s[i, 4] = color
-
-led = pyb.LED(3)
-wled = pyb.LED(2)
-
-def colorcycle():
-    x = 8
-    while True:
-        for i in range(x):
-            yield i, 0, x
-        for i in range(x):
-            yield x, 0, x-i
-        for i in range(x):
-            yield x, i, 0
-        for i in range(x):
-            yield x-i, x, 0
-        for i in range(x):
-            yield 0, x, i
-        for i in range(x):
-            yield 0, x-i, x
-
-colorcycles = [colorcycle() for i in range(8)]
-for a in range(8):
-    for b in range(a):
-        for c in range(2):
-            next(colorcycles[b])
-
-while not switch():
-    for a, c in enumerate(colorcycles):
-        s[a, 5] = next(c)
-    wled.on()
-    s.show()
-    wled.off()
-    led.toggle()
-    time.sleep_ms(100)
-
-raise ValueError()
-
-pieces = []
-for color, *shape_defs in (
-        (CYAN,
-            (4, 1, 'XXXX'),
-            (1, 4, 'XXXX'),
-        ),
-        (BLUE,
-            (3, 2, ' X '
-                   'XXX'),
-            (2, 3, 'X '
-                   'XX'
-                   'X '),
-            (3, 2, 'XXX'
-                   ' X '),
-            (2, 3, ' X'
-                   'XX'
-                   ' X'),
-        ),
-        (ORANGE,
-            (3, 2, 'XX '
-                   ' XX'),
-            (2, 3, ' X'
-                   'XX'
-                   'X '),
-        ),
-        (YELLOW,
-            (3, 2, ' XX'
-                   'XX '),
-            (2, 3, 'X '
-                   'XX'
-                   ' X'),
-        ),
-        (LIME,
-            (3, 2, '  X'
-                   'XXX'),
-            (2, 3, 'X '
-                   'X '
-                   'XX'),
-            (3, 2, 'XXX'
-                   'X  '),
-            (2, 3, 'XX'
-                   ' X'
-                   ' X'),
-        ),
-        (MAGENTA,
-            (3, 2, 'X  '
-                   'XXX'),
-            (2, 3, 'XX'
-                   'X '
-                   'X '),
-            (3, 2, 'XXX'
-                   '  X'),
-            (2, 3, ' X'
-                   ' X'
-                   'XX'),
-        ),
-        (RED,
-            (2, 2, 'XX'
-                   'XX'),
-        )
-    ):
-    shapes = []
-    for w, h, shape_def in shape_defs:
-        shape = set()
-        for x in range(h):
-            for y in range(w):
-                if shape_def[0] == 'X':
-                    shape.add((x, y))
-                shape_def = shape_def[1:]
-        shapes.append(shape)
-    pieces.append((color, shapes))
-
-board = {}
-floater = []
-
-for c in range(8):
-    board[s.length, c] = WHITE
-
-for r in range(s.length):
-    board[r, -1] = WHITE
-    board[r, 8] = WHITE
-
-def new_floater():
-    color, shapes = choice(pieces)
-    #color, shapes = pieces[0]  # DEBUG
-    floater.clear()
-    floater.extend((0, 2, color, 0, shapes))
-new_floater()
-
-def update_row(n):
-    f_row, f_col, f_color, f_turn, f_shapes = floater
-    colors = []
-    for col in range(8):
-        color = board.get((n, col), BLACK)
-        if (n - f_row, col - f_col) in f_shapes[f_turn]:
-            color = f_color
-        colors.append(color)
-    s.set_row(n, colors)
-
-for r in range(s.length):
-    update_row(r)
-s.show()
-
-def collide():
-    f_row, f_col, f_color, f_turn, f_shapes = floater
-    for x, y in f_shapes[f_turn]:
-        if (x + f_row, y + f_col) in board:
-            return True
-    return False
-
-def handle_filled_rows(n):
-    start_row = min(n + 4, s.length - 1)
-    flash = False
-    for is_white in [True, False] * 2:
-        for row in range(max(0, start_row - 4), start_row + 1):
-            if all((row, c) in board for c in range(8)):
-                flash = True
-                if is_white:
-                    s.set_row(row, [FLASH] * 8)
-                else:
-                    update_row(row)
-        if not flash:
-            return
-        s.show()
-        micros.counter(0)
-        while micros.counter() < 20000:
-            pass
-    offset = 0
-    for row in range(start_row, -1, -1):
-        while all((row + offset, c) in board for c in range(8)):
-            offset += 1
-        for c in range(8):
-            try:
-                board[(row, c)] = board[(row - offset, c)]
-            except KeyError:
-                board.pop((row, c), None)
-    for row in reversed(range(s.length)):
-        update_row(row)
-        s.show()
-
-def set_brick():
-    for x, y in f_shapes[f_turn]:
-        board[x - 1 + f_row, y + f_col] = f_color
-    floater[0] = s.length
 
 class Button:
     def __init__(self, desc):
@@ -226,56 +37,70 @@ class Button:
     def held(self):
         return self.pin.value()
 
+
+class Piece:
+    def __init__(self):
+        color, blocks = PIECE_INFOS[0]
+        self.color = color
+        self.blocks = blocks
+        self.row = 0
+        self.col = 0
+        self._update()
+
+    def rotate(self):
+        self.blocks = {(self.max_y - y, x) for x, y in self.blocks}
+        self._update()
+
+    def _update(self):
+        self.max_x = max(x for x, y in self.blocks)
+        self.max_y = max(y for x, y in self.blocks)
+
+    def draw(self, color=None):
+        if color is None:
+            color = self.color
+        for x, y in self.blocks:
+            display[x + self.col, y + self.row] = color
+
+    def advance(self, blocks):
+        self.row += 1
+
+
 left = Button('Y1')
 turn = Button('Y2')
 right = Button('Y3')
 down = Button('Y4')
 
+
+def make_piece_info(color, rows):
+    return color, {(x, y)
+                   for x, row in enumerate(rows)
+                   for y, char in enumerate(row)
+                   if char == 'X'}
+
+
+PIECE_INFOS = tuple(make_piece_info(color, rows) for color, rows in (
+    (CYAN, ('XXXX',)),
+    (BLUE, (' X ', 'XXX')),
+    (ORANGE, ('XX ', ' XX')),
+    (YELLOW, (' XX', 'XX ')),
+    (LIME, ('  X', 'XXX')),
+    (MAGENTA, ('X  ', 'XXX')),
+    (RED, ('XX', 'XX')),
+))
+
+
+piece = Piece()
+blocks = {}
+
+
 while not switch():
-    updated = False
-    try:
-        if micros.counter() > 100000 or down.held():
-            updated = True
-            micros.counter(0)
+    piece.draw(BLACK)
 
-            floater[0] += 1
-            f_row, f_col, f_color, f_turn, f_shapes = floater
-            if collide():
-                set_brick()
-                handle_filled_rows(f_row)
-                new_floater()
-                if collide():
-                    set_brick()
-                    raise ValueError('Game Over!')
-                micros.counter(0)
+    while micros.counter() < 100000 and not down.held():
+        pass
+    micros.counter(0)
 
-        if left.was_pressed():
-            floater[1] -= 1
-            if collide():
-                floater[1] += 1
-            else:
-                updated = True
+    piece.advance(blocks)
 
-        if right.was_pressed():
-            floater[1] += 1
-            if collide():
-                floater[1] -= 1
-            else:
-                updated = True
-
-        if turn.was_pressed():
-            old_rotation = floater[3]
-            old_col = floater[1]
-            floater[3] = (floater[3] + 1) % len(f_shapes)
-            for col in (0, 1, -1, 2, -2, 3, -3, 4, -4):
-                floater[1] = old_col + col
-                if (0 <= floater[1] < 8) and not collide():
-                    updated = True
-                    break
-            else:
-                floater[3] = old_rotation
-                floater[1] = old_col
-    finally:
-        for r in range(max(0, floater[0] - 1), min(floater[0] + 4, s.length)):
-            update_row(r)
-        s.show()
+    piece.draw()
+    display.show()
