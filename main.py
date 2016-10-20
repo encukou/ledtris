@@ -3,9 +3,9 @@ import time
 from strips import Strips
 
 SIZE = 300
+COLS = 8
 
 display = Strips(SIZE)
-micros = pyb.Timer(2, prescaler=83, period=0x3fffffff)
 switch = pyb.Switch()
 
 CYAN = 0, 3, 2
@@ -21,18 +21,30 @@ WHITE = 3, 3, 3
 FLASH = 255, 255, 255
 
 
+tick_count = 0
+timer = pyb.Timer(1, freq=10)
+@timer.callback
+def add_tick(t):
+    global tick_count
+    tick_count += 1
+
+
 class Button:
     def __init__(self, desc):
-        self.pin = pyb.Pin(desc, pyb.Pin.IN, pyb.Pin.PULL_DOWN)
+        self.pin = pin = pyb.Pin(desc, pyb.Pin.IN, pyb.Pin.PULL_DOWN)
         self.prev = self.pin.value()
+        self._pressed_count = 0
+        extint = pyb.ExtInt(pin, pyb.ExtInt.IRQ_RISING, pyb.Pin.PULL_DOWN,
+                            self.callback)
+
+    def callback(self):
+        self._pressed_count += 1
 
     def was_pressed(self):
-        value = self.pin.value()
-        try:
-            if not self.prev and value:
-                return True
-        finally:
-            self.prev = value
+        if self._pressed_count:
+            self._pressed_count -= 1
+            return True
+        return False
 
     def held(self):
         return self.pin.value()
@@ -67,6 +79,10 @@ class Piece:
                 return True
         if self.row + self.max_y >= SIZE:
             return True
+        if self.col + self.max_x >= COLS:
+            return True
+        if self.col < 0:
+            return True
         return False
 
     def advance(self, blocks):
@@ -88,8 +104,8 @@ down = Button('Y4')
 
 def make_piece_info(color, rows):
     return color, {(x, y)
-                   for x, row in enumerate(rows)
-                   for y, char in enumerate(row)
+                   for y, row in enumerate(rows)
+                   for x, char in enumerate(row)
                    if char == 'X'}
 
 
@@ -111,14 +127,32 @@ blocks = {}
 while not switch():
     piece.draw(BLACK)
 
-    while micros.counter() < 100000 and not down.held():
-        pass
-    micros.counter(0)
+    while turn.was_pressed():
+        for i in range(4):
+            piece.rotate()
+            if not piece.crashed(blocks):
+                break
 
-    if piece.advance(blocks):
-        piece.set(blocks)
-        piece.draw()
-        piece = Piece()
+    while right.was_pressed():
+        piece.col += 1
+        if piece.crashed(blocks):
+            piece.col -= 1
+
+    while left.was_pressed():
+        piece.col -= 1
+        if piece.crashed(blocks):
+            piece.col += 1
+
+    while tick_count > 0:
+        tick_count -= 1
+        if piece.advance(blocks):
+            piece.set(blocks)
+            piece.draw()
+            piece = Piece()
 
     piece.draw()
     display.show()
+    if down.held():
+        tick_count += 3
+    else:
+        pyb.wfi()
