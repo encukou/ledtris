@@ -9,7 +9,8 @@ RED = 3, 0, 0
 
 
 class Shape:
-    def __init__(self, color, rows):
+    def __init__(self, name, color, rows):
+        self.name = name
         self.color = color
         self.size = len(rows)
         self.rotations = rotations = []
@@ -21,6 +22,10 @@ class Shape:
         for i in range(4):
             rotations.append(blocks)
             blocks = frozenset((self.size - y, x) for x, y in blocks)
+
+    def __repr__(self):
+        return "<{} '{}' at {}>".format(type(self).__name__, self.name,
+                                        hex(id(self)))
 
 
 class Piece:
@@ -35,9 +40,7 @@ class Piece:
         c = self.col + dx
         r = self.row + dy
         for x, y in self.shape.rotations[(self.rotation + dr) % 4]:
-            yy = y + r
-            if yy >= 0:
-                yield x + c, yy
+            yield x + c, y + r
 
     def crashed(self, dx, dy, dr):
         board = self.board
@@ -75,15 +78,21 @@ class Piece:
                 y += 1
             yield x, -y
 
+    def __repr__(self):
+        return "<{} {} @ {},{} r{} at {}>".format(
+            type(self).__name__,
+            self.shape.name, self.col, self.row, self.rotation,
+            hex(id(self)))
+
 
 SHAPES = tuple(Shape(*args) for args in (
-    (CYAN, ('', 'XXXX', '', '')),
-    (BLUE, ('X', 'XXX', '')),
-    (ORANGE, ('  X', 'XXX', '')),
-    (YELLOW, ('XX', 'XX')),
-    (LIME, (' XX', 'XX', '')),
-    (MAGENTA, (' X ', 'XXX', '')),
-    (RED, ('XX', ' XX')),
+    ('I', CYAN, ('', 'XXXX', '', '')),
+    ('J', BLUE, ('X', 'XXX', '')),
+    ('L', ORANGE, ('  X', 'XXX', '')),
+    ('O', YELLOW, ('XX', 'XX')),
+    ('S', LIME, (' XX', 'XX', '')),
+    ('T', MAGENTA, (' X ', 'XXX', '')),
+    ('Z', RED, ('XX', ' XX')),
 ))
 
 I, J, L, O, S, T, Z = SHAPES
@@ -144,10 +153,11 @@ class Board:
                 else:
                     break
 
-        for i in range(left):
-            current.move(dx=-1)
-        for i in range(right):
-            current.move(dx=+1)
+        sideways = right - left
+        if sideways:
+            sign = 1 if sideways > 0 else -1
+            for n in range(abs(sideways)):
+                current.move(dx=sign)
 
         if hard_drop:
             while current.move(dy=+1):

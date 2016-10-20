@@ -62,13 +62,15 @@ hard_down = Button('Y6')
 def draw_current():
     color = board.current_color
     for x, y in board.gen_current_blocks():
-        display[x, y] = color
+        if y >= 0:
+            display[x, y] = color
 
 speedup = False
 
 while not switch():
     for x, y in board.gen_current_blocks():
-        display[x, y] = BLACK
+        if y >= 0:
+            display[x, y] = BLACK
 
     if down.times_pressed():
         speedup = True
