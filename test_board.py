@@ -156,10 +156,109 @@ def test_rotation(board_fixture):
         '        ',
         shapes='LTS',
     )
-    board_fixture.go(cw=1, down=1)
+    board_fixture.go(ccw=1, down=2)
     board_fixture.assert_situation(
         '  ::    ',
         '   :    ',
         '   :    ',
         current_shape='L',
+    )
+
+
+def test_rotation_i1(board_fixture):
+    board_fixture.init(
+        'X         ',
+        'XX        ',
+        'XX        ',
+        'XX        ',
+        'X    X    ',
+        'XX   X    ',
+        'XX   XX   ',
+        shapes='ILTS',
+    )
+    board_fixture.go(down=3, right=1)
+    board_fixture.assert_situation(
+        'X         ',
+        'XX        ',
+        'XX  ::::  ',
+        'XX        ',
+        'X    X    ',
+        'XX   X    ',
+        'XX   XX   ',
+    )
+    board_fixture.go(cw=1)
+    board_fixture.assert_situation(
+        'X         ',
+        'XX    :   ',
+        'XX    :   ',
+        'XX    :   ',
+        'X    X:   ',
+        'XX   X    ',
+        'XX   XX   ',
+    )
+
+
+def test_rotation_i2(board_fixture):
+    board_fixture.init(
+        'X         ',
+        'XX        ',
+        'XX        ',
+        'XX        ',
+        'X    X X  ',
+        'XX   X XX ',
+        'XX   XX X ',
+        shapes='ILTS',
+    )
+    board_fixture.go(down=3, right=1)
+    board_fixture.assert_situation(
+        'X         ',
+        'XX        ',
+        'XX  ::::  ',
+        'XX        ',
+        'X    X X  ',
+        'XX   X XX ',
+        'XX   XX X ',
+    )
+    board_fixture.go(cw=1)
+    board_fixture.assert_situation(
+        'X         ',
+        'XX    :   ',
+        'XX    :   ',
+        'XX    :   ',
+        'X    X:X  ',
+        'XX   X XX ',
+        'XX   XX X ',
+    )
+
+
+def test_rotation_i3(board_fixture):
+    board_fixture.init(
+        'X         ',
+        'XX        ',
+        'XX        ',
+        'XX        ',
+        'X   XX X  ',
+        'XX  X  XX ',
+        'XX  X   X ',
+        shapes='ILTS',
+    )
+    board_fixture.go(down=3, right=1)
+    board_fixture.assert_situation(
+        'X         ',
+        'XX        ',
+        'XX  ::::  ',
+        'XX        ',
+        'X   XX X  ',
+        'XX  X  XX ',
+        'XX  X   X ',
+    )
+    board_fixture.go(cw=1)
+    board_fixture.assert_situation(
+        'X         ',
+        'XX    :   ',
+        'XX    :   ',
+        'XX    :   ',
+        'X   XX:X  ',
+        'XX  X  XX ',
+        'XX  X   X ',
     )

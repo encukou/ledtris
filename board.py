@@ -21,7 +21,7 @@ class Shape:
             if char == 'X')
         for i in range(4):
             rotations.append(blocks)
-            blocks = frozenset((self.size - y, x) for x, y in blocks)
+            blocks = frozenset((self.size - 1 - y, x) for x, y in blocks)
 
     def __repr__(self):
         return "<{} '{}' at {}>".format(type(self).__name__, self.name,
@@ -69,14 +69,13 @@ class Piece:
         self.board = None
 
     def gen_shifts(self, direction):
-        yield 0, 0
-        r = self.rotation
-        for val in SHIFTS.get((self.shape.size, r, (r + direction) % 4), ()):
-            y, x = divmod(val, 8)
-            if x > 4:
-                x -= 8
-                y += 1
-            yield x, -y
+        if self.shape.size == 4:
+            x_shifts = 0, direction, -direction, direction * 2, -direction * 2
+        else:
+            x_shifts = 0, direction, -direction
+        for x in x_shifts:
+            for y in 0, 1:
+                yield x, y
 
     def __repr__(self):
         return "<{} {} @ {},{} r{} at {}>".format(
@@ -96,28 +95,6 @@ SHAPES = tuple(Shape(*args) for args in (
 ))
 
 I, J, L, O, S, T, Z = SHAPES
-
-SHIFTS = {
-    # http://web.archive.org/web/20080226183843/http://www.the-shell.net/img/srs_study.html
-    (4, 0, 1): (+2, -1, +10, -17),
-    (4, 0, 3): (-2, +1, +6, -15),
-    (4, 1, 2): (-2, +1, +6, +7),
-    (4, 1, 0): (-2, +1, +17, -10),
-    (4, 2, 3): (+1, -2, +17, -10),
-    (4, 2, 1): (-1, +2, +15, -6),
-    (4, 3, 0): (+2, -1, +15, -6),
-    (4, 3, 2): (+2, -1, +10, -9),
-
-    (3, 0, 1): (+1, -7, +16, +17),
-    (3, 0, 4): (-1, -9, +16, +15),
-    (3, 1, 2): (-1, +7, -16, -17),
-    (3, 1, 0): (-1, +7, -16, -17),
-    (3, 2, 3): (-1, -9, +16, +15),
-    (3, 2, 1): (+1, -7, +16, +17),
-    (3, 3, 0): (+1, +9, -16, -15),
-    (3, 3, 2): (+1, +9, -16, -15),
-}
-
 
 class Board:
     def __init__(self, width, height, *, rng, shapes=None):
@@ -143,7 +120,7 @@ class Board:
                 hard_drop=False):
         current = self.current
 
-        rotation = ccw - cw
+        rotation = cw - ccw
         if rotation:
             sign = 1 if rotation > 0 else -1
             for n in range(abs(rotation)):
