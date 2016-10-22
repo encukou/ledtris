@@ -3,7 +3,7 @@ STRIP_WIDTH = 10;
 STRIP_THICKNESS = 0.5;
 
 LED_PITCH = 16.5;
-LED_SIDE = 8;
+LED_SIDE = 5;
 
 COMPONENT_WIDTH = 4;
 COMPONENT_LENGTH = 3;
@@ -16,13 +16,15 @@ COMB_LENGTH = STRIP_COUNT * LED_PITCH + TOOTH_LENGTH;
 COMB_HEIGHT = 2;
 
 PIN_R = 2;
-PIN_POS = [3];
+PIN_POS = 5;
+PIN_DX = 2;
+PIN_Y = 1.5;
 
 CORD_HOLE_R = 2.5;
-CORD_HOLE_POS = [10];
-CORD_HOLE_Y = 3.5;
+CORD_HOLE_POS = 5;
+CORD_HOLE_Y = 7;
 
-SYNCPAD_LENGTH = 14;
+SYNCPAD_LENGTH = 10;
 
 TOL = 0.1;
 
@@ -31,6 +33,10 @@ WIRE_HOLDER_R = 2;
 WIRE_D_1 = 2.5;
 WIRE_D_2 = 2;
 WIRE_D_3 = 1;
+
+TAB_WIDTH = 2;
+TAB_HEIGHT = 1;
+TAB_OVERHANG = 0.5;
 
 module wire_cutout(d, n=2) {
     union () {
@@ -47,22 +53,50 @@ module wire_cutout(d, n=2) {
     }
 }
 
-module comb () translate ([0, 0, -COMB_HEIGHT]) {
+module for_every_strip () {
+    for (i=[0:STRIP_COUNT-1]) {
+        translate ([(i+.5) * LED_PITCH+TOOTH_LENGTH/2, 0, 0]) {
+            children();
+        }
+    }
+}
+
+module comb (spin) translate ([0, 0, -COMB_HEIGHT]) {
     union () {
         translate ([-COMB_LENGTH/2, 0, 0]) {
             difference () {
-                cube ([COMB_LENGTH, COMB_WIDTH, COMB_HEIGHT-STRIP_THICKNESS/2]);
-                for (i=[0:STRIP_COUNT]) {
-                    translate ([(i+.5) * LED_PITCH+TOOTH_LENGTH/2-COMPONENT_WIDTH/2,
-                                -TOL,
-                                COMB_HEIGHT-COMPONENT_HEIGHT]) {
-                        cube ([COMPONENT_WIDTH, COMPONENT_LENGTH, 100]);
+                cube ([COMB_LENGTH, COMB_WIDTH-TOL, COMB_HEIGHT-STRIP_THICKNESS/2]);
+                if (spin>0) {
+                    for_every_strip () {
+                        translate ([-COMPONENT_WIDTH/2,
+                                    -TOL,
+                                    COMB_HEIGHT-COMPONENT_HEIGHT]) {
+                            cube ([COMPONENT_WIDTH, COMPONENT_LENGTH, 100]);
+                        }
+                    }
+                }
+            }
+            for (x=[-1, 0, 1]) {
+                translate ([(x+STRIP_COUNT/2)*LED_PITCH+TOOTH_LENGTH/2-TAB_WIDTH/2,
+                            -TAB_OVERHANG, COMB_HEIGHT*2]) {
+                    difference () {
+                        cube ([TAB_WIDTH, TAB_OVERHANG+COMB_WIDTH, TAB_HEIGHT]);
+                        rotate ([atan(TAB_HEIGHT/(TAB_OVERHANG*2)), 0, 0]) {
+                            translate ([-1, 0, 0]) cube([TAB_WIDTH+2, 100, 100]);
+                        }
                     }
                 }
             }
             for (i=[0:STRIP_COUNT]) {
                 translate ([i * LED_PITCH+TOL, 0, 0]) {
                     cube ([TOOTH_LENGTH-TOL*2, COMB_WIDTH, COMB_HEIGHT*2]);
+                }
+            }
+            if (spin<0) {
+                for_every_strip () {
+                    translate ([-STRIP_WIDTH/2+TOL*2, -COMB_WIDTH, 0]) {
+                        cube ([STRIP_WIDTH-TOL*4, COMB_WIDTH*2, COMB_HEIGHT-STRIP_THICKNESS/2]);
+                    }
                 }
             }
         }
@@ -72,15 +106,15 @@ module comb () translate ([0, 0, -COMB_HEIGHT]) {
                     translate ([0, -COMB_WIDTH, 0]) {
                         cube ([SYNCPAD_LENGTH+s*TOL*2, COMB_WIDTH*2, COMB_HEIGHT]);
                     }
-                    for (x=PIN_POS) translate ([x, COMB_WIDTH/2, 0]) {
+                    translate ([PIN_POS+PIN_DX*spin, PIN_Y, 0]) {
                         cylinder(COMB_HEIGHT*2+TOL*2, r=PIN_R-TOL, $fn=20);
                     }
                 }
-                for (x=PIN_POS) translate ([x, -COMB_WIDTH/2, -1]) {
+                translate ([PIN_POS-PIN_DX*spin, -PIN_Y, -1]) {
                     cylinder(COMB_HEIGHT*2+2, r=PIN_R+TOL, $fn=20);
                 }
-                for (x=CORD_HOLE_POS) for (y=[-1,1]) {
-                    translate ([x, y*CORD_HOLE_Y, -1]) {
+                for (y=[-1,1]) {
+                    translate ([CORD_HOLE_POS, y*CORD_HOLE_Y, -1]) {
                         cylinder (COMB_HEIGHT+2, r=CORD_HOLE_R, $fn=20);
                     }
                 }
@@ -111,7 +145,7 @@ module comb () translate ([0, 0, -COMB_HEIGHT]) {
     }
 }
 
-comb();
-% rotate ([180, 0, 0]) scale ([-1, 1, 1]) translate ([0, 0, -TOL]) comb();
+comb(1);
+% rotate ([180, 0, 0]) scale ([-1, 1, 1]) translate ([0, 0, -TOL]) comb(-1);
 
-scale ([-1, 1, 1]) translate ([-WIRE_HOLDER_LENGTH, COMB_WIDTH*3, 0]) comb();
+scale ([-1, 1, 1]) translate ([-WIRE_HOLDER_LENGTH, COMB_WIDTH*3, 0]) comb(-1);
