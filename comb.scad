@@ -24,19 +24,15 @@ CORD_HOLE_R = 2.5;
 CORD_HOLE_POS = 5;
 CORD_HOLE_Y = 7;
 
-SYNCPAD_LENGTH = 10;
+SYNCPAD_LENGTH = 11;
 
 TOL = 0.1;
 
-WIRE_HOLDER_LENGTH = 19;
-WIRE_HOLDER_R = 2;
-WIRE_D_1 = 2.5;
-WIRE_D_2 = 2;
-WIRE_D_3 = 1;
-
-TAB_WIDTH = 2;
-TAB_HEIGHT = 1;
-TAB_OVERHANG = 0.5;
+WIRE_HOLDER_LENGTH = 23;
+WIRE_HOLDER_R = 3;
+WIRE_D_1 = 2.9;
+WIRE_D_2 = 2.3;
+WIRE_D_3 = 1.2;
 
 module wire_cutout(d, n=2) {
     union () {
@@ -65,24 +61,15 @@ module comb (spin) translate ([0, 0, -COMB_HEIGHT]) {
     union () {
         translate ([-COMB_LENGTH/2, 0, 0]) {
             difference () {
-                cube ([COMB_LENGTH, COMB_WIDTH-TOL, COMB_HEIGHT-STRIP_THICKNESS/2]);
+                translate ([0, TOL, 0]) {
+                    cube ([COMB_LENGTH, COMB_WIDTH-TOL, COMB_HEIGHT-STRIP_THICKNESS/2]);
+                }
                 if (spin>0) {
                     for_every_strip () {
                         translate ([-COMPONENT_WIDTH/2,
                                     -TOL,
                                     COMB_HEIGHT-COMPONENT_HEIGHT]) {
                             cube ([COMPONENT_WIDTH, COMPONENT_LENGTH, 100]);
-                        }
-                    }
-                }
-            }
-            for (x=[-1, 0, 1]) {
-                translate ([(x+STRIP_COUNT/2)*LED_PITCH+TOOTH_LENGTH/2-TAB_WIDTH/2,
-                            -TAB_OVERHANG, COMB_HEIGHT*2]) {
-                    difference () {
-                        cube ([TAB_WIDTH, TAB_OVERHANG+COMB_WIDTH, TAB_HEIGHT]);
-                        rotate ([atan(TAB_HEIGHT/(TAB_OVERHANG*2)), 0, 0]) {
-                            translate ([-1, 0, 0]) cube([TAB_WIDTH+2, 100, 100]);
                         }
                     }
                 }
