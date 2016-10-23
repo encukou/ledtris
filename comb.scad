@@ -81,8 +81,8 @@ module comb (spin) translate ([0, 0, -COMB_HEIGHT]) {
             }
             if (spin<0) {
                 for_every_strip () {
-                    translate ([-STRIP_WIDTH/2+TOL*2, -COMB_WIDTH, 0]) {
-                        cube ([STRIP_WIDTH-TOL*4, COMB_WIDTH*2, COMB_HEIGHT-STRIP_THICKNESS/2]);
+                    translate ([-STRIP_WIDTH/2+TOL/2, -COMB_WIDTH, 0]) {
+                        cube ([STRIP_WIDTH-TOL, COMB_WIDTH*2, COMB_HEIGHT-STRIP_THICKNESS/2]);
                     }
                 }
             }
@@ -135,4 +135,7 @@ module comb (spin) translate ([0, 0, -COMB_HEIGHT]) {
 comb(1);
 % rotate ([180, 0, 0]) scale ([-1, 1, 1]) translate ([0, 0, -TOL]) comb(-1);
 
-scale ([-1, 1, 1]) translate ([-WIRE_HOLDER_LENGTH, COMB_WIDTH*3, 0]) comb(-1);
+translate ([WIRE_HOLDER_LENGTH, COMB_WIDTH*2.3, 0]) {
+    scale ([-1, 1, 1]) comb(-1);
+    % rotate ([180, 0, 0]) translate ([0, 0, -TOL]) comb(1);
+}
