@@ -133,6 +133,14 @@ module button_pad () {
     }
 }
 
+module door_guide_triangle (s=3, h=5) {
+    hull () translate ([-WALL_THICKNESS, 0, 0]) rotate ([0, 90, 0]) {
+        cylinder (WALL_THICKNESS*2, d=TOL);
+        translate ([0, s, 0]) cylinder (WALL_THICKNESS*2, d=TOL);
+        translate ([-h, s, 0]) cylinder (WALL_THICKNESS*2, d=TOL);
+    }
+}
+
 module top_cover () {
     difference () {
         union () {
@@ -148,13 +156,11 @@ module top_cover () {
                 translate ([-100, 0, TOP_H-PAD_TOTAL_H]) cube ([200, 200, 200]);
             }
             translate ([0, -BRAIN_L+WALL_THICKNESS*2, WALL_THICKNESS]) {
-                for (x=[-1,1]) translate ([x*BATTERY_D/4-WALL_THICKNESS/2, 0, 0]) {
-                    s = 2;
-                    h = -5;
-                    hull () rotate ([0, 90, 0]) {
-                        cylinder (WALL_THICKNESS, d=WALL_THICKNESS);
-                        translate ([0, s, 0]) cylinder (WALL_THICKNESS, d=WALL_THICKNESS);
-                        translate ([h, s, 0]) cylinder (WALL_THICKNESS, d=WALL_THICKNESS);
+                for (x=[-1,1]) {
+                    door_guide_triangle ();
+                    translate ([x*BATTERY_D/2, 0, 0]) door_guide_triangle ();
+                    translate ([x*(BATTERY_D/2+BATTERY_PAD_NOOK+TOL), -WALL_THICKNESS/2, 0]) {
+                        rotate ([0, 0, -90*x]) door_guide_triangle ();
                     }
                 }
             }
@@ -167,7 +173,7 @@ module top_cover () {
             rotate ([90, 0, 0]) {
                 cylinder (100, r=BATTERY_DOOR_HANDLE_R+TOL, $fn=20);
             }
-            w = BATTERY_D+BATTERY_PAD_NOOK+TOL*2;
+            w = BATTERY_D+BATTERY_PAD_NOOK*2+TOL*2;
             translate ([-w/2, 0, -100]) {
                 cube ([w, WALL_THICKNESS+TOL*2, 200]);
             }
