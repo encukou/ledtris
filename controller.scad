@@ -251,11 +251,12 @@ module battery_end_spring () {
 }
 
 module battery_end_door () {
+    h = WALL_THICKNESS-TOL;
     difference () {
         union () {
             w = BATTERY_D + BATTERY_PAD_NOOK*2 - TOL*2;
             translate ([-w/2, -BATTERY_D/2, 0]) {
-                cube ([w, BATTERY_D, WALL_THICKNESS-TOL]);
+                cube ([w, BATTERY_D, h]);
             }
             r = BATTERY_DOOR_HANDLE_R;
             translate ([0, -BATTERY_D/2+r, 0]) {
@@ -265,9 +266,14 @@ module battery_end_door () {
             }
             %cylinder (WALL_THICKNESS, d=BATTERY_D); 
         }
-        for (r=[0, 180]) rotate ([0, 0, r]) {
-            translate ([-WIRE_D/4, SPRING_NUB_D/2, -1]) {
-                cube ([WIRE_D/2, BATTERY_D/4, WIRE_D/2+1]);
+        for (y=[-SPRING_NUB_D/2, SPRING_NUB_D/2]) {
+            for (x=[-SPRING_NUB_D/2, SPRING_NUB_D/2]) {
+                translate ([x, y, -TOL]) {
+                    cylinder (100, d=WIRE_D, $fn=10);
+                }
+            }
+            translate ([-SPRING_NUB_D/2, y, h]) rotate ([0, 90, 0]) {
+                cylinder (SPRING_NUB_D, d=WIRE_D-TOL, $fn=10);
             }
         }
     }
