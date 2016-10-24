@@ -34,7 +34,7 @@ NODEMCU_ROUND_R = 3;
 MCU_PIN_L = 37;
 MCU_PIN_W = 31;
 MCU_PIN_D = 1;
-MCU_PIN_H = 9;
+MCU_PIN_H = 6;
 MCU_PIN_SEP = 2.5;
 
 STRUT_R = 2;
@@ -58,6 +58,7 @@ BATTERY_SHAFT_L = BATTERY_L*3+SPRING_COILED_L+WIRE_D;
 SCREW_LOOSE_R = 1.9;
 SCREW_SUPPORT_R = 3.5;
 SCREW_TIGHT_R = 1.25;
+SCREW_BOT_Y = BRAIN_L - SCREW_SUPPORT_R*2 - WALL_THICKNESS;
 
 BATTERY_DOOR_HANDLE_R = 1.5;
 BATTERY_DOOR_HANDLE_H = 2;
@@ -98,12 +99,12 @@ module button_pos () {
 
 module screw_pos () {
     translate ([0, TOUCH_L-SCREW_SUPPORT_R-WALL_THICKNESS, 0]) children ();
-    translate ([-WIDTH/3, -BRAIN_L+SCREW_SUPPORT_R*2+WALL_THICKNESS, 0]) children ();
-    translate ([WIDTH/3, -BRAIN_L+SCREW_SUPPORT_R*2+WALL_THICKNESS, 0]) children ();
+    translate ([-WIDTH/3, -SCREW_BOT_Y, 0]) children ();
+    translate ([WIDTH/3, -SCREW_BOT_Y, 0]) children ();
 }
 
 module strut_pos () {
-    children();
+    translate ([0, 5, 0]) children();
     translate ([10, 25, 0]) children();
     translate ([-10, 25, 0]) children();
     translate ([0, 45, 0]) children();
@@ -189,8 +190,9 @@ module bottom_cover () {
                 cylinder(200, d=WIDTH);
             }
         }
-        union () translate ([0, -BRAIN_L+WALL_THICKNESS*2, 0]) {
-            {
+        union () {
+            t = -BRAIN_L+WALL_THICKNESS*2;
+            translate ([0, t, 0]) {
                 // Main battery shaft
                 translate ([-BATTERY_D/2, -100, BATTERY_D/2+WALL_THICKNESS*2]) {
                     cube ([BATTERY_D, BATTERY_SHAFT_L+100, BATTERY_D/2]);
@@ -199,7 +201,7 @@ module bottom_cover () {
                     rotate ([-90, 0, 0]) cylinder (BATTERY_SHAFT_L+100, d=BATTERY_D, $fn=80);
                 }
             }
-            translate ([0, BATTERY_SHAFT_L, 0]) {
+            translate ([0, t+BATTERY_SHAFT_L, 0]) {
                 // Spring terminal
                 translate ([-BATTERY_D/2-BATTERY_PAD_NOOK, -TOL, -1]) {
                     cube ([BATTERY_D+BATTERY_PAD_NOOK*2,
@@ -210,7 +212,7 @@ module bottom_cover () {
                     cube ([spring_hole_d, SPRING_EXTENDED_L, spring_hole_d]);
                 }
             }
-            translate ([0, 0, 0]) {
+            translate ([0, t, 0]) {
                 // Door terminal
                 translate ([-BATTERY_PAD_NOOK-BATTERY_D/2, -WALL_THICKNESS, -1]) {
                     cube ([BATTERY_D+BATTERY_PAD_NOOK*2, WALL_THICKNESS+TOL, BATTERY_D+WALL_THICKNESS*2+1]);
@@ -223,11 +225,14 @@ module bottom_cover () {
                     }
                 }
             }
-            translate ([0, -BRAIN_L/2+NODEMCU_L, -1]) {
+            translate ([0, -SCREW_BOT_Y+NODEMCU_L/2+SCREW_SUPPORT_R*2, -1]) {
                 // Brain pins
                 hole_w = MCU_PIN_SEP + MCU_PIN_D + TOL;
-                for (x=[-1, 1]) translate ([x*(MCU_PIN_W/2)-hole_w/2, 0, 0]) {
+                for (x=[-1, 1]) translate ([x*(MCU_PIN_W/2)-hole_w/2, -MCU_PIN_L/2, 0]) {
                     cube ([hole_w, MCU_PIN_L, MCU_PIN_H+TOL+1]);
+                }
+                translate ([-NODEMCU_W/2, -NODEMCU_L/2, -2]) {
+                    #cube ([NODEMCU_W, NODEMCU_L, 2]);
                 }
             }
         }
@@ -294,7 +299,7 @@ module button_support () {
                 translate ([0, 0, -PAD_BOTTOM_H]) {
                     main_shape (h=WALL_THICKNESS*2+PAD_BOTTOM_H, dwall=WALL_THICKNESS+TOL);
                 }
-                translate ([-100, 0, -PAD_BOTTOM_H]) cube([200, 100, 100]);
+                translate ([-100, 5, -PAD_BOTTOM_H]) cube([200, 100, 100]);
             }
             button_pad_pos () {
                 translate ([-PAD_ROD_D/2, -PAD_ROD_D, WALL_THICKNESS]) {
