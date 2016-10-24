@@ -97,9 +97,9 @@ module button_pos () {
 }
 
 module screw_pos () {
-    translate ([-WIDTH/3, 0, 0]) children ();
-    translate ([WIDTH/3, 0, 0]) children ();
     translate ([0, TOUCH_L-SCREW_SUPPORT_R-WALL_THICKNESS, 0]) children ();
+    translate ([-WIDTH/3, -BRAIN_L+SCREW_SUPPORT_R*2+WALL_THICKNESS, 0]) children ();
+    translate ([WIDTH/3, -BRAIN_L+SCREW_SUPPORT_R*2+WALL_THICKNESS, 0]) children ();
 }
 
 module strut_pos () {
@@ -143,7 +143,10 @@ module top_cover () {
                 }
             }
             strut_pos () cylinder (TOP_H+STRUT_DEPTH, r=STRUT_R-TOL, $fn=20);
-            screw_pos () cylinder (TOP_H-PAD_TOTAL_H, r=SCREW_SUPPORT_R, $fn=20);
+            difference () {
+                screw_pos () cylinder (TOP_H, r=SCREW_SUPPORT_R, $fn=20);
+                translate ([-100, 0, TOP_H-PAD_TOTAL_H]) cube ([200, 200, 200]);
+            }
             translate ([0, -BRAIN_L+WALL_THICKNESS*2, WALL_THICKNESS]) {
                 for (x=[-1,1]) translate ([x*BATTERY_D/4-WALL_THICKNESS/2, 0, 0]) {
                     s = 2;
@@ -268,55 +271,55 @@ module _add_screw_supports () {
     difference () {
         union () {
             children ();
-            screw_pos () translate ([0, 0, -PAD_BOTTOM_H]) {
-                cylinder (PAD_TOTAL_H, r=SCREW_SUPPORT_R, $fn=20);
-            }
-        }
-        screw_pos () translate ([0, 0, -100]) {
-            cylinder (200, r=SCREW_LOOSE_R, $fn=10);
         }
     }
 }
 
 module button_support () {
-    _add_screw_supports () {
-        difference () {
-            union () {
-                intersection () {
-                    translate ([0, 0, -PAD_BOTTOM_H]) {
-                        main_shape (h=WALL_THICKNESS*2+PAD_BOTTOM_H, dwall=WALL_THICKNESS+TOL);
-                    }
-                    translate ([-100, 0, -PAD_BOTTOM_H]) cube([200, 100, 100]);
+    difference () {
+        union () {
+            intersection () {
+                translate ([0, 0, -PAD_BOTTOM_H]) {
+                    main_shape (h=WALL_THICKNESS*2+PAD_BOTTOM_H, dwall=WALL_THICKNESS+TOL);
                 }
-                button_pad_pos () {
-                    translate ([-PAD_ROD_D/2, -PAD_ROD_D, WALL_THICKNESS]) {
-                        cube ([PAD_ROD_D, PAD_ROD_D*2, PBUTTON_H-TOL*2]);
-                    }
-                    cylinder (WALL_THICKNESS+PAD_ROD_H, d=PAD_ROD_D-TOL*2, $fn=10);
-                }
+                translate ([-100, 0, -PAD_BOTTOM_H]) cube([200, 100, 100]);
             }
+            button_pad_pos () {
+                translate ([-PAD_ROD_D/2, -PAD_ROD_D, WALL_THICKNESS]) {
+                    cube ([PAD_ROD_D, PAD_ROD_D*2, PBUTTON_H-TOL*2]);
+                }
+                cylinder (WALL_THICKNESS+PAD_ROD_H, d=PAD_ROD_D-TOL*2, $fn=10);
+            }
+        }
+        difference () {
             translate ([0, 0, -PAD_BOTTOM_H-1]) {
                 main_shape (h=PAD_BOTTOM_H+1, dwall=WALL_THICKNESS*3);
             }
-            button_pos () {
-                rotate ([0, 0, 45]) {
-                    translate ([-(PBUTTON_SIDE-TOL)/2, -(PBUTTON_SIDE-TOL)/2, WALL_THICKNESS]) {
-                        cube ([PBUTTON_SIDE+TOL, PBUTTON_SIDE+TOL, 100]);
-                    }
-                    for (x=[PBUTTON_SIDE/2, -PBUTTON_SIDE/2]) {
-                        for (y=[PBUTTON_LEG_POS/2, -PBUTTON_LEG_POS/2]) {
-                            translate ([x, y, -1]) cylinder (100, r=PBUTTON_LEG_R, $fn=10);
-                        }
-                    }
-                }
-            }
-            strut_pos () translate ([0, 0, -1]) {
-                cylinder (100, r=STRUT_R+TOL, $fn=20);
+            screw_pos () translate ([0, 0, -PAD_BOTTOM_H]) {
+                cylinder (PAD_TOTAL_H, r=SCREW_SUPPORT_R, $fn=20);
             }
         }
         button_pos () {
-            scale ([1, 1, -1]) cylinder (PAD_BOTTOM_H, d=PBUTTON_SIDE/2, $fn=20);
+            rotate ([0, 0, 45]) {
+                translate ([-(PBUTTON_SIDE-TOL)/2, -(PBUTTON_SIDE-TOL)/2, WALL_THICKNESS]) {
+                    cube ([PBUTTON_SIDE+TOL, PBUTTON_SIDE+TOL, 100]);
+                }
+                for (x=[PBUTTON_SIDE/2, -PBUTTON_SIDE/2]) {
+                    for (y=[PBUTTON_LEG_POS/2, -PBUTTON_LEG_POS/2]) {
+                        translate ([x, y, -1]) cylinder (100, r=PBUTTON_LEG_R, $fn=10);
+                    }
+                }
+            }
         }
+        strut_pos () translate ([0, 0, -1]) {
+            cylinder (100, r=STRUT_R+TOL, $fn=20);
+        }
+        screw_pos () translate ([0, 0, -100]) {
+            cylinder (200, r=SCREW_LOOSE_R, $fn=10);
+        }
+    }
+    button_pos () {
+        scale ([1, 1, -1]) cylinder (PAD_BOTTOM_H, d=PBUTTON_SIDE/2, $fn=20);
     }
 }
 
