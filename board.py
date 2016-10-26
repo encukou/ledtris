@@ -1,6 +1,6 @@
 
 CYAN = 0, 4, 3
-BLUE = 0, 0, 8
+WHITE = 3, 3, 3
 ORANGE = 5, 2, 0
 YELLOW = 3, 4, 0
 LIME = 0, 7, 0
@@ -91,7 +91,7 @@ class Piece:
 
 SHAPES = tuple(Shape(*args) for args in (
     ('I', CYAN, ('', 'XXXX', '', '')),
-    ('J', BLUE, ('X', 'XXX', '')),
+    ('J', WHITE, ('X', 'XXX', '')),
     ('L', ORANGE, ('  X', 'XXX', '')),
     ('O', YELLOW, ('XX', 'XX')),
     ('S', LIME, (' XX', 'XX', '')),
