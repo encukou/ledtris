@@ -1,11 +1,11 @@
 
-CYAN = 0, 3, 2
-BLUE = 0, 0, 4
-ORANGE = 4, 2, 0
-YELLOW = 3, 3, 0
-LIME = 0, 3, 0
+CYAN = 0, 4, 3
+BLUE = 0, 0, 8
+ORANGE = 5, 2, 0
+YELLOW = 3, 4, 0
+LIME = 0, 7, 0
 MAGENTA = 3, 0, 4
-RED = 3, 0, 0
+RED = 7, 0, 0
 
 
 class Shape:
