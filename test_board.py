@@ -262,3 +262,37 @@ def test_rotation_i3(board_fixture):
         'XX  X  XX ',
         'XX  X   X ',
     )
+
+def test_cleared_one(board_fixture):
+    board_fixture.init(
+        'XX    XX',
+        'XX    XX',
+        shapes='ILT',
+    )
+    board_fixture.go(down=2)
+    board_fixture.assert_situation(
+        'XX    XX',
+        'XX::::XX',
+    )
+    assert board_fixture.board.get_cleared_lines() == [1]
+
+def test_cleared_four(board_fixture):
+    board_fixture.init(
+        '    X X ',
+        'XXX XXXX',
+        'XXX XXXX',
+        'XXX XXXX',
+        'XXX XXXX',
+        '   X    ',
+        shapes='ILT',
+    )
+    board_fixture.go(down=3, cw=1)
+    board_fixture.assert_situation(
+        '    X X ',
+        'XXX:XXXX',
+        'XXX:XXXX',
+        'XXX:XXXX',
+        'XXX:XXXX',
+        '   X    ',
+    )
+    assert board_fixture.board.get_cleared_lines() == [3, 2, 1, 0]

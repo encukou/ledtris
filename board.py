@@ -147,10 +147,23 @@ class Board:
 
         return False
 
+    def get_cleared_lines(self):
+        curr_blocks = set(self.current.gen_blocks(0, 0, 0))
+        candidates = set(y for x, y in curr_blocks)
+        width = self.width
+        self_blocks = self.blocks
+        lines = sorted((y for y in candidates
+                        if all((x, y) in self_blocks or (x, y) in curr_blocks
+                               for x in range(0, width))),
+                       reverse=True)
+        return lines
+
     def next_piece(self):
+        cleared_lines = self.get_cleared_lines()
         self.current.set()
         self.current = self.upcoming
         self.upcoming = next(self.piece_generator)
+        return cleared_lines
 
     def gen_current_blocks(self):
         return self.current.gen_blocks(0, 0, 0)
