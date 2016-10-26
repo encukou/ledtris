@@ -107,6 +107,7 @@ class Board:
         self.piece_generator = self._generate_pieces()
         self.current = next(self.piece_generator)
         self.upcoming = next(self.piece_generator)
+        self.clear_lines = None
 
     def _generate_pieces(self):
         while True:
@@ -118,6 +119,11 @@ class Board:
 
     def advance(self, *, left=0, right=0, cw=0, ccw=0, down=0,
                 hard_drop=False):
+        if self.clear_lines:
+            for _ in self.clear_lines:
+                pass
+            self.clear_lines = None
+
         current = self.current
 
         rotation = cw - ccw
@@ -163,6 +169,8 @@ class Board:
         self.current.set()
         self.current = self.upcoming
         self.upcoming = next(self.piece_generator)
+        if cleared_lines:
+            self.clear_lines = self._clear_lines(cleared_lines)
         return cleared_lines
 
     def gen_current_blocks(self):
@@ -171,3 +179,34 @@ class Board:
     @property
     def current_color(self):
         return self.current.shape.color
+
+    def _clear_lines(self, cleared):
+        cleared = set(cleared)
+        max_line = max(cleared)
+        num_skip = 0
+        delta = 0
+        todo_count = len(cleared)
+        for dest_line in range(max_line, -1, -1):
+            while dest_line - delta in cleared:
+                delta += 1
+            source_line = dest_line - delta
+            update = {}
+            some_popped = 0
+            for i in range(self.width):
+                source_key = i, source_line
+                dest_key = i, dest_line
+                popped = self.blocks.pop(source_key, None)
+                if popped:
+                    some_popped = True
+                    update[source_key] = None
+                    update[dest_key] = popped
+                    self.blocks[dest_key] = popped
+                else:
+                    dest_popped = self.blocks.pop(dest_key, None)
+                    if dest_popped:
+                        update[dest_key] = None
+            if not some_popped:
+                todo_count -= 1
+            if not todo_count:
+                return
+            yield update

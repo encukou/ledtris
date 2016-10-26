@@ -34,7 +34,7 @@ class BoardFixture:
                     print(':', end='')
                 else:
                     print(LETTERS[blocks.get((x, y))], end='')
-            print(']')
+            print(']', y)
 
     def go(self, **kwargs):
         print('-' * (self.board.width+2),
@@ -44,7 +44,7 @@ class BoardFixture:
         if self.board.advance(**kwargs):
             print('piece set:', self.board.current)
             self.board.next_piece()
-        self.debug_print()
+        return self.board.clear_lines
 
     def assert_situation(self, *rows, current_shape=None):
         if current_shape:
@@ -58,8 +58,11 @@ class BoardFixture:
         got.update({(x, y): COLORS[':']
                     for x, y in self.board.gen_current_blocks()
                     if y >= 0})
-        print('=' * (self.board.width+2), 'expected:')
-        self.debug_print(blocks=should, current=())
+        print('=' * (self.board.width+2), 'got:')
+        self.debug_print()
+        if got != should:
+            print('=' * (self.board.width+2), 'expected:')
+            self.debug_print(blocks=should, current=())
         assert got == should
 
 @pytest.fixture
@@ -295,4 +298,148 @@ def test_cleared_four(board_fixture):
         'XXX:XXXX',
         '   X    ',
     )
-    assert board_fixture.board.get_cleared_lines() == [3, 2, 1, 0]
+    assert board_fixture.board.get_cleared_lines() == [4, 3, 2, 1]
+    it = board_fixture.go(down=1)
+    board_fixture.assert_situation(
+        '    X X ',
+        'XXXIXXXX',
+        'XXXIXXXX',
+        'XXXIXXXX',
+        'XXXIXXXX',
+        '   X    ',
+    )
+    next(it)
+    board_fixture.assert_situation(
+        '        ',
+        'XXXIXXXX',
+        'XXXIXXXX',
+        'XXXIXXXX',
+        '    X X ',
+        '   X    ',
+    )
+    next(it)
+    board_fixture.assert_situation(
+        '        ',
+        'XXXIXXXX',
+        'XXXIXXXX',
+        '        ',
+        '    X X ',
+        '   X    ',
+    )
+    next(it)
+    board_fixture.assert_situation(
+        '        ',
+        'XXXIXXXX',
+        '        ',
+        '        ',
+        '    X X ',
+        '   X    ',
+    )
+    next(it)
+    board_fixture.assert_situation(
+        '       ',
+        '       ',
+        '       ',
+        '       ',
+        '    X X ',
+        '   X    ',
+    )
+    with pytest.raises(StopIteration):
+        next(it)
+    board_fixture.assert_situation(
+        '        ',
+        '        ',
+        '        ',
+        '        ',
+        '    X X ',
+        '   X    ',
+    )
+
+@pytest.mark.parametrize('play_out', [True, False])
+def test_clear_complex(board_fixture, play_out):
+    board_fixture.init(
+        '        ',
+        'XXX     ',
+        'XXX  XXX',
+        'XXX  XXX',
+        'XXX XXXX',
+        '   X    ',
+        shapes='JIT',
+    )
+    board_fixture.go(down=1)
+    board_fixture.assert_situation(
+        '  :::   ',
+        'XXX     ',
+        'XXX  XXX',
+        'XXX  XXX',
+        'XXX XXXX',
+        '   X    ',
+    )
+    board_fixture.go(down=1, cw=1)
+    board_fixture.assert_situation(
+        '   ::   ',
+        'XXX:    ',
+        'XXX: XXX',
+        'XXX  XXX',
+        'XXX XXXX',
+        '   X    ',
+    )
+    board_fixture.go(down=2)
+    board_fixture.assert_situation(
+        '        ',
+        'XXX     ',
+        'XXX::XXX',
+        'XXX: XXX',
+        'XXX:XXXX',
+        '   X    ',
+    )
+    assert board_fixture.board.get_cleared_lines() == [4, 2]
+    it = board_fixture.go(down=1)
+    if play_out:
+        board_fixture.assert_situation(
+            '        ',
+            'XXX     ',
+            'XXXJJXXX',
+            'XXXJ XXX',
+            'XXXJXXXX',
+            '   X    ',
+        )
+        next(it)
+        board_fixture.assert_situation(
+            '        ',
+            'XXX     ',
+            'XXXJJXXX',
+            '        ',
+            'XXXJ XXX',
+            '   X    ',
+        )
+        next(it)
+        board_fixture.assert_situation(
+            '        ',
+            '        ',
+            'XXXJJXXX',
+            'XXX     ',
+            'XXXJ XXX',
+            '   X    ',
+        )
+        next(it)
+        board_fixture.assert_situation(
+            '        ',
+            '        ',
+            '        ',
+            'XXX     ',
+            'XXXJ XXX',
+            '   X    ',
+        )
+        with pytest.raises(StopIteration):
+            next(it)
+    else:
+        it = board_fixture.go()
+    board_fixture.assert_situation(
+        '        ',
+        '        ',
+        '        ',
+        'XXX     ',
+        'XXXJ XXX',
+        '   X    ',
+    )
