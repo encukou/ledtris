@@ -10,8 +10,6 @@ COLS = 8
 display = Strips(SIZE)
 switch = pyb.Switch()
 
-board = Board(COLS, SIZE, rng=pyb.rng)
-
 BLACK = 0, 0, 0
 WHITE = 3, 3, 3
 FLASH = 255, 255, 255
@@ -31,9 +29,12 @@ class Button:
     def __init__(self, desc):
         self.pin = pin = pyb.Pin(desc, pyb.Pin.IN, pyb.Pin.PULL_DOWN)
         self.prev = self.pin.value()
-        self._pressed_count = 0
+        self.reset()
         extint = pyb.ExtInt(pin, pyb.ExtInt.IRQ_RISING, pyb.Pin.PULL_DOWN,
                             self.callback)
+
+    def reset(self):
+        self._pressed_count = 0
 
     def callback(self):
         self._pressed_count += 1
@@ -53,12 +54,8 @@ class Button:
         return self.pin.value()
 
 
-left = Button('Y1')
-right = Button('Y2')
-clockwise = Button('Y3')
-counterclockwise = Button('Y4')
-down = Button('Y5')
-hard_down = Button('Y6')
+left, right, clockwise, counterclockwise, down, hard_down = all_buttons = (
+    Button(n) for n in ['Y1', 'Y2', 'Y3', 'Y4', 'Y5', 'Y6'])
 
 
 # 48
@@ -136,17 +133,11 @@ for y, data in enumerate(_bg_data, start=20):
             _set_bg(i, y, 1, 1)
 
 
-for (x, y), color in BG_DATA.items():
-    display[x, y] = color
-
-
 def draw_current():
     color = board.current_color
     for x, y in board.gen_current_blocks():
         if y >= 0:
             display[x, y] = color
-
-speedup = False
 
 def flash_lines(lines):
     for y in cleared_lines:
@@ -158,50 +149,105 @@ def flash_lines(lines):
 def reset_color(x, y):
     display[x, y] = BG_DATA.get((x, y), BLACK)
 
+
+ANIM_MAP = ((4, 3), (2, 1), (0,), (1, 2))
+ANIM_COLORS = (
+    [(1, 0, 0)]
+  + [(2, 0, 0)] * 2
+  + [(3, 0, 0)] * 3
+  + [(4, 0, 0)] * 4
+  + [(5, 0, 0)] * 20
+  + [(4, 0, 0)] * 5
+  + [(3, 0, 0)] * 6
+  + [(2, 0, 0)] * 7
+  + [(1, 0, 0)] * 8
+  + [None])
+ANIM_COLORS.reverse()
+
+def show_anim_frame():
+    for positions, color in zip(anim_list, ANIM_COLORS):
+        for x, y in positions:
+            if color is None:
+                reset_color(x, y)
+            else:
+                display[x, y] = color
+    display.show()
+    time.sleep_ms(10)
+
+
 while not switch():
-    for x, y in board.gen_current_blocks():
-        if y >= 0:
+    board = Board(COLS, SIZE, rng=pyb.rng)
+
+    anim_list = [()] * len(ANIM_COLORS)
+    for y in range(SIZE):
+        for x in range(COLS):
             reset_color(x, y)
+        for x in ANIM_MAP[y % len(ANIM_MAP)]:
+            anim_list.append(((x, y), (7-x, y)))
+            if len(anim_list) > len(ANIM_COLORS):
+                anim_list.pop(0)
+            show_anim_frame()
 
-    if down.times_pressed():
-        speedup = True
+    while anim_list:
+        anim_list.pop(0)
+        show_anim_frame()
 
-    if speedup:
-        tick_count += 3
+    speedup = False
 
-    ticks = tick_count
+    for button in all_buttons:
+        button.reset()
     tick_count = 0
 
-    if board.advance(
-            left=left.times_pressed(),
-            right=right.times_pressed(),
-            cw=clockwise.times_pressed(),
-            ccw=counterclockwise.times_pressed(),
-            down=ticks,
-            hard_drop=bool(hard_down.times_pressed())):
-        speedup = False
-        draw_current()
-        cleared_lines = board.next_piece()
-        if cleared_lines:
-            for i in 1, 2, 3:
-                for x, y in flash_lines(cleared_lines):
-                    display[x, y] = WHITE
-                for x, y in flash_lines(cleared_lines):
+    try:
+        while not switch():
+            for x, y in board.gen_current_blocks():
+                if y >= 0:
                     reset_color(x, y)
-            for updates in board.clear_lines:
-                for (x, y), color in updates.items():
-                    if color is None:
-                        reset_color(x, y)
-                    else:
-                        display[x, y] = color
-                display.show()
-                time.sleep_ms(100)
 
-    draw_current()
+            if down.times_pressed():
+                speedup = True
 
-    if not down.held():
-        speedup = False
+            if speedup:
+                tick_count += 3
 
-    display.show()
-    if not speedup:
-        pyb.wfi()
+            ticks = tick_count
+            tick_count = 0
+
+            if board.advance(
+                    left=left.times_pressed(),
+                    right=right.times_pressed(),
+                    cw=clockwise.times_pressed(),
+                    ccw=counterclockwise.times_pressed(),
+                    down=ticks,
+                    hard_drop=bool(hard_down.times_pressed())):
+                speedup = False
+                draw_current()
+                cleared_lines = board.next_piece()
+                if cleared_lines:
+                    for i in 1, 2, 3:
+                        for x, y in flash_lines(cleared_lines):
+                            display[x, y] = WHITE
+                        for x, y in flash_lines(cleared_lines):
+                            reset_color(x, y)
+                    for updates in board.clear_lines:
+                        for (x, y), color in updates.items():
+                            if color is None:
+                                reset_color(x, y)
+                            else:
+                                display[x, y] = color
+                        display.show()
+                        time.sleep_ms(100)
+                tick_count = 0
+
+            draw_current()
+
+            if not down.held():
+                speedup = False
+
+            display.show()
+            if not speedup:
+                pyb.wfi()
+    except Exception as error:
+        print(error)
+    else:
+        break

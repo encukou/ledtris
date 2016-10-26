@@ -7,6 +7,9 @@ LIME = 0, 7, 0
 MAGENTA = 3, 0, 4
 RED = 7, 0, 0
 
+class GameOverError(Exception):
+    pass
+
 
 class Shape:
     def __init__(self, name, color, rows):
@@ -66,6 +69,8 @@ class Piece:
         color = self.shape.color
         for x, y in self.gen_blocks(0, 0, 0):
             blocks[x, y] = color
+            if y < 0:
+                raise GameOverError
         self.board = None
 
     def gen_shifts(self, direction):
