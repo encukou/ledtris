@@ -90,7 +90,21 @@ while not switch():
             hard_drop=bool(hard_down.times_pressed())):
         speedup = False
         draw_current()
-        board.next_piece()
+        cleared_lines = board.next_piece()
+        if cleared_lines:
+            for color in (FLASH, BLACK) * 3:
+                for y in cleared_lines:
+                    for x in range(board.width):
+                        display[x, y] = color
+                display.show()
+                time.sleep_ms(100)
+            for updates in board.clear_lines:
+                for (x, y), color in updates.items():
+                    if color is None:
+                        color = BLACK
+                    display[x, y] = color
+                display.show()
+                time.sleep_ms(100)
 
     draw_current()
 
