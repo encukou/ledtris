@@ -1,11 +1,11 @@
 
-CYAN = 0, 4, 3
-WHITE = 3, 3, 3
-ORANGE = 5, 2, 0
-YELLOW = 3, 4, 0
-LIME = 0, 7, 0
-MAGENTA = 3, 0, 4
-RED = 7, 0, 0
+CYAN = 0, 6, 4
+WHITE = 4, 4, 4
+ORANGE = 7, 3, 0
+YELLOW = 4, 6, 0
+LIME = 0, 10, 0
+MAGENTA = 3, 0, 7
+RED = 10, 0, 0
 
 class GameOverError(Exception):
     pass
